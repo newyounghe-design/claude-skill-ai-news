@@ -54,6 +54,24 @@
 - 完整简报 → 保存到 Obsidian 文件（永久存储）
 - 快讯摘要 → 展示在对话中（保持上下文干净）
 
+### v4.3：twitter-cli 集成 | twitter-cli Integration
+
+**中文**：
+RSSHub 需要 Docker，启动慢且依赖复杂。发现了 [twitter-cli](https://github.com/jackwener/twitter-cli) 这个工具——无需 API Key，直接用浏览器 Cookie 获取 X 数据。
+
+现在 X 数据获取改为 twitter-cli 优先：
+- 直接获取 KOL 推文（`twitter user-posts op7418 --yaml`）
+- 搜索 AI 话题（`twitter search "Claude Code" --yaml`）
+- RSSHub 降级为可选（用于 YouTube、微博等其他平台）
+
+**English**:
+RSSHub requires Docker, which is slow to start and has complex dependencies. Discovered [twitter-cli](https://github.com/jackwener/twitter-cli) — no API Key needed, uses browser cookies to fetch X data directly.
+
+X data fetching now prioritizes twitter-cli:
+- Fetch KOL posts directly (`twitter user-posts op7418 --yaml`)
+- Search AI topics (`twitter search "Claude Code" --yaml`)
+- RSSHub demoted to optional (for YouTube, Weibo, etc.)
+
 ### v4.1 → v4.2：工具发现 + 命令系统
 
 被动等待 RSS 推送不够，需要主动搜索 GitHub/YouTube/X 上的热门工具。
@@ -109,12 +127,37 @@ claude skill install newyounghe-design/ai-news
 
 ---
 
-## 依赖
+## 依赖 | Dependencies
 
-- **RSSHub**：本地 Docker 运行，用于抓取 RSS 数据
-  ```bash
-  docker run -d --name rsshub -p 1200:1200 diygod/rsshub
-  ```
+### twitter-cli（推荐 | Recommended）
+
+用于获取 X/Twitter 数据，无需 Docker。
+
+For fetching X/Twitter data, no Docker required.
+
+```bash
+# 安装 | Install
+uv tool install twitter-cli
+# 或 | or
+pipx install twitter-cli
+
+# 需要代理（中国大陆）| Proxy required (China)
+export TWITTER_PROXY=http://127.0.0.1:7890
+```
+
+认证方式：在浏览器登录 x.com，工具自动提取 Cookie。
+
+Authentication: Login to x.com in browser, tool auto-extracts cookies.
+
+### RSSHub（可选 | Optional）
+
+用于获取 YouTube、微博等其他平台数据。
+
+For fetching YouTube, Weibo, and other platform data.
+
+```bash
+docker run -d --name rsshub -p 1200:1200 diygod/rsshub
+```
 
 ---
 
@@ -169,14 +212,15 @@ claude-skill-ai-news/
 
 ---
 
-## 版本历史
+## 版本历史 | Changelog
 
 | 版本 | 日期 | 更新内容 |
 |------|------|----------|
-| v4.2 | 2026-03-14 | 增加命令系统，完善文档 |
-| v4.1 | 2026-03-14 | 新增深度分析、工具发现、上下文管理 |
-| v4.0 | 2026-03-14 | 简化流程，分离存储 |
-| v3.0 | 2026-03-14 | 初始版本 |
+| v4.3 | 2026-03-15 | 集成 twitter-cli，X 数据获取无需 Docker / Integrated twitter-cli, X data fetching without Docker |
+| v4.2 | 2026-03-14 | 增加命令系统，完善文档 / Added command system, improved docs |
+| v4.1 | 2026-03-14 | 新增深度分析、工具发现、上下文管理 / Added deep analysis, tool discovery, context management |
+| v4.0 | 2026-03-14 | 简化流程，分离存储 / Simplified flow, separated storage |
+| v3.0 | 2026-03-14 | 初始版本 / Initial version |
 
 ---
 

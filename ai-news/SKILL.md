@@ -4,7 +4,7 @@ user_invocable: true
 argument-hint: "[quick|full|tools|history] - 不同模式"
 ---
 
-# AI 新闻智能简报 v4.2
+# AI 新闻智能简报 v4.3
 
 ## ⚙️ 配置（使用前请确认路径）
 
@@ -13,8 +13,9 @@ argument-hint: "[quick|full|tools|history] - 不同模式"
 | 简报保存目录 | `/Users/shakely2020/Documents/obsidian笔记库/100-Project/AI之路/news/` | 完整简报保存位置 |
 | 数据目录 | `/Users/shakely2020/Documents/Claude/ai-news-aggregator/data/` | RSS 原始数据 |
 | 抓取脚本 | `/Users/shakely2020/Documents/Claude/ai-news-aggregator/fetch-raw-data.sh` | 数据抓取脚本 |
+| X 代理 | `http://127.0.0.1:7890` | twitter-cli 代理（Clash） |
 
-> **分享给他人时**：请修改上述路径为目标系统的实际路径
+> **分享给他人时**：请修改上述路径和代理地址为目标系统的实际配置
 
 ---
 
@@ -45,15 +46,46 @@ argument-hint: "[quick|full|tools|history] - 不同模式"
 
 ### `/ai-news` — 生成完整简报
 
-#### Step 1：抓取 RSS 数据（静默执行）
+#### Step 1：获取 X/Twitter 数据（静默执行）
 
+使用 `twitter-cli` 直接获取 X 数据，无需 Docker。
+
+**1.1 获取 AI KOL 推文**
 ```bash
-/Users/shakely2020/Documents/Claude/ai-news-aggregator/fetch-raw-data.sh
+# 设置代理
+export TWITTER_PROXY=http://127.0.0.1:7890
+
+# 获取关注的 AI KOL 最新推文（每人 20 条）
+twitter user-posts 9hills --max 20 --yaml
+twitter user-posts shao__meng --max 20 --yaml
+twitter user-posts Barret_China --max 20 --yaml
+twitter user-posts dotey --max 20 --yaml
+twitter user-posts op7418 --max 20 --yaml
+```
+
+**1.2 搜索 AI 热门话题**
+```bash
+# 搜索 AI 相关话题（Latest 模式，最新优先）
+twitter search "Claude Code" -t Latest --max 30 --yaml
+twitter search "MCP server" -t Latest --max 20 --yaml
+twitter search "AI agent" -t Latest --max 20 --yaml
+```
+
+**1.3 获取自己的时间线（可选）**
+```bash
+# 获取 Following 时间线
+twitter feed -t following --max 50 --yaml
 ```
 
 **失败处理：**
-- 如果报错 "RSSHub 未运行"，提示用户：`docker start rsshub`
-- 如果部分源失败，继续用可用数据
+- 如果 twitter-cli 报错（网络/认证），跳过 X 数据，用 WebSearch 补充
+- 在简报末尾注明：`⚠️ X 数据不可用：{错误原因}`
+
+**认证说明：**
+- twitter-cli 自动从浏览器提取 Cookie（需先在浏览器登录 x.com）
+- 支持 Arc/Chrome/Edge/Firefox/Brave
+
+---
 
 #### Step 2：主动搜索工具资讯（静默执行）
 
@@ -75,14 +107,40 @@ argument-hint: "[quick|full|tools|history] - 不同模式"
 ```
 关注频道：Fireship、AI Advantage、All About AI、Matt Wolfe
 
-**2.3 X/Twitter 工具推荐**
-从 RSS 数据中提取带有 `github.com` 链接的推文，特别关注：
-- 9hills、shao__meng、Barret_China 推荐的工具
+**2.3 X/Twitter 工具推荐（从 Step 1 数据中提取）**
+从 twitter-cli 获取的数据中提取带有 `github.com` 链接的推文，特别关注：
+- 9hills、shao__meng、Barret_China、dotey、op7418 推荐的工具
 - 带有 #AITools #MCP #ClaudeCode 标签的内容
+
+---
+
+#### Step 2.5：（可选）RSSHub 补充数据
+
+如果需要 YouTube、微博等非 X 数据源，可启动 RSSHub：
+
+```bash
+# 检测并启动 Docker
+if ! docker info > /dev/null 2>&1; then
+  open -a Docker
+  for i in {1..30}; do
+    docker info > /dev/null 2>&1 && break
+    sleep 1
+  done
+fi
+
+# 启动 RSSHub 并抓取
+docker start rsshub 2>/dev/null || true
+/Users/shakely2020/Documents/Claude/ai-news-aggregator/fetch-raw-data.sh
+```
+
+> **注意**：X 数据已通过 twitter-cli 获取，RSSHub 主要用于其他平台
 
 #### Step 3：读取并分析数据（静默执行）
 
-读取 JSON 文件：`{数据目录}/{今天日期}_raw.json`
+**数据来源优先级：**
+1. **twitter-cli** — X/Twitter 数据（主要来源）
+2. **WebSearch** — GitHub、YouTube 等
+3. **RSSHub** — 其他平台补充（可选）
 
 **重要：不要在对话中输出原始数据，直接在内部处理**
 
@@ -263,7 +321,7 @@ created: {YYYY-MM-DD HH:MM}
 
 ---
 
-*{HH:MM} 生成 | 数据来源: RSSHub + WebSearch*
+*{HH:MM} 生成 | 数据来源: twitter-cli + WebSearch*
 ```
 
 ---
@@ -275,18 +333,18 @@ created: {YYYY-MM-DD HH:MM}
 今天 AI 圈比较平静。值得关注：{一条 B 级内容}
 ```
 
+**twitter-cli 失败时：**
+- 检查代理是否运行：`curl -x http://127.0.0.1:7890 https://x.com`
+- 检查 Cookie 是否有效：重新登录 x.com
+- 跳过 X 数据，用 WebSearch 补充
+- 在简报末尾注明：`⚠️ X 数据不可用：{错误原因}`
+
 **WebSearch 失败时：**
-- 跳过工具搜索步骤，用 RSS 数据中的工具推荐
-- 在简报末尾注明：`⚠️ 工具搜索不可用，仅展示 RSS 数据`
+- 跳过工具搜索步骤，用 twitter-cli 数据中的工具推荐
+- 在简报末尾注明：`⚠️ 工具搜索不可用，仅展示 X 数据`
 
 **数据不完整时：**
 在简报末尾注明：`⚠️ 部分数据源不可用：{列出}`
-
-**RSSHub 未运行时：**
-```
-❌ RSSHub 未运行，请先启动：
-docker start rsshub
-```
 
 ---
 
